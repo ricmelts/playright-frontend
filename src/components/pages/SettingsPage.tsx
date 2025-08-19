@@ -1,11 +1,8 @@
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
-import { Input } from '../ui/input';
-import { Label } from '../ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs';
 import { Switch } from '../ui/switch';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { ThemeToggle } from '../ThemeToggle';
 import { 
   Settings, 
@@ -13,12 +10,12 @@ import {
   Shield, 
   Database, 
   Palette, 
-  Globe, 
   Mail,
   Smartphone,
   Monitor,
   Save,
-  RefreshCw
+  RefreshCw,
+  Download
 } from 'lucide-react';
 
 export function SettingsPage() {
@@ -45,13 +42,7 @@ export function SettingsPage() {
     // Data & Storage
     autoBackup: true,
     dataRetention: '12',
-    exportFormat: 'json',
-    
-    // Regional
-    language: 'en',
-    timezone: 'America/New_York',
-    currency: 'USD',
-    dateFormat: 'MM/DD/YYYY'
+    exportFormat: 'csv'
   });
 
   const handleSettingChange = (key: string, value: any) => {
@@ -74,8 +65,29 @@ export function SettingsPage() {
   };
 
   const handleExportData = () => {
-    // TODO: Implement data export
-    console.log('Exporting user data');
+    // TODO: Implement CSV data export from database
+    // This should export user data, deals, players, etc. in CSV format
+    console.log('Exporting user data as CSV');
+    
+    // Placeholder CSV export logic
+    const csvData = [
+      ['Type', 'Name', 'Value', 'Date'],
+      ['Deal', 'Marcus Johnson x Nike', '$15,000', '2025-01-15'],
+      ['Deal', 'Sarah Williams x Adidas', '$12,000', '2025-01-10'],
+      ['Player', 'David Chen', 'Tennis', '2025-01-05'],
+      // TODO: Replace with actual database data
+    ];
+    
+    const csvContent = csvData.map(row => row.join(',')).join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `playright-data-${new Date().toISOString().split('T')[0]}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    window.URL.revokeObjectURL(url);
   };
 
   return (
@@ -100,7 +112,7 @@ export function SettingsPage() {
       </div>
 
       <Tabs defaultValue="appearance" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-5">
+        <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="appearance">
             <Palette className="w-4 h-4 mr-2" />
             Appearance
@@ -116,10 +128,6 @@ export function SettingsPage() {
           <TabsTrigger value="data">
             <Database className="w-4 h-4 mr-2" />
             Data
-          </TabsTrigger>
-          <TabsTrigger value="regional">
-            <Globe className="w-4 h-4 mr-2" />
-            Regional
           </TabsTrigger>
         </TabsList>
 
@@ -361,112 +369,20 @@ export function SettingsPage() {
 
               <div className="flex items-center justify-between">
                 <div>
-                  <Label className="text-base">Export Format</Label>
-                  <p className="text-sm text-muted-foreground">Preferred format for data exports</p>
+                  <Label className="text-base">Data Export</Label>
+                  <p className="text-sm text-muted-foreground">Export your data in CSV format</p>
                 </div>
-                <Select 
-                  value={settings.exportFormat} 
-                  onValueChange={(value) => handleSettingChange('exportFormat', value)}
-                >
-                  <SelectTrigger className="w-32">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="json">JSON</SelectItem>
-                    <SelectItem value="csv">CSV</SelectItem>
-                    <SelectItem value="xlsx">Excel</SelectItem>
-                  </SelectContent>
-                </Select>
+                <Button onClick={handleExportData} variant="outline">
+                  <Download className="w-4 h-4 mr-2" />
+                  Export CSV
+                </Button>
               </div>
 
               <div className="pt-4 border-t">
-                <Button onClick={handleExportData} variant="outline" className="w-full">
+                <Button onClick={handleExportData} className="w-full">
                   <Database className="w-4 h-4 mr-2" />
-                  Export My Data
+                  Download All Data (CSV)
                 </Button>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="regional" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Regional Settings</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Language</Label>
-                  <Select 
-                    value={settings.language} 
-                    onValueChange={(value) => handleSettingChange('language', value)}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="en">English</SelectItem>
-                      <SelectItem value="es">Español</SelectItem>
-                      <SelectItem value="fr">Français</SelectItem>
-                      <SelectItem value="de">Deutsch</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label>Timezone</Label>
-                  <Select 
-                    value={settings.timezone} 
-                    onValueChange={(value) => handleSettingChange('timezone', value)}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="America/New_York">Eastern Time</SelectItem>
-                      <SelectItem value="America/Chicago">Central Time</SelectItem>
-                      <SelectItem value="America/Denver">Mountain Time</SelectItem>
-                      <SelectItem value="America/Los_Angeles">Pacific Time</SelectItem>
-                      <SelectItem value="UTC">UTC</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label>Currency</Label>
-                  <Select 
-                    value={settings.currency} 
-                    onValueChange={(value) => handleSettingChange('currency', value)}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="USD">USD ($)</SelectItem>
-                      <SelectItem value="EUR">EUR (€)</SelectItem>
-                      <SelectItem value="GBP">GBP (£)</SelectItem>
-                      <SelectItem value="CAD">CAD (C$)</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label>Date Format</Label>
-                  <Select 
-                    value={settings.dateFormat} 
-                    onValueChange={(value) => handleSettingChange('dateFormat', value)}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="MM/DD/YYYY">MM/DD/YYYY</SelectItem>
-                      <SelectItem value="DD/MM/YYYY">DD/MM/YYYY</SelectItem>
-                      <SelectItem value="YYYY-MM-DD">YYYY-MM-DD</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
               </div>
             </CardContent>
           </Card>
