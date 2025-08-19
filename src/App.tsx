@@ -10,6 +10,7 @@ import { NewsPage } from './components/pages/NewsPage';
 import { MessagesPage } from './components/pages/MessagesPage';
 import { NotificationsPage } from './components/pages/NotificationsPage';
 import { ProfilePage } from './components/pages/ProfilePage';
+import { SettingsPage } from './components/pages/SettingsPage';
 
 export default function App() {
   return (
@@ -30,6 +31,7 @@ export default function App() {
               <Route path="/account/messages" element={<MessagesPage />} />
               <Route path="/account/notifications" element={<NotificationsPage />} />
               <Route path="/account/profile" element={<ProfilePage />} />
+              <Route path="/account/settings" element={<SettingsPage />} />
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
           </Layout>

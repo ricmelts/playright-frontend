@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Home, Search, DollarSign, TrendingUp, MessageSquare, Bell, User, Menu, Newspaper } from 'lucide-react';
+import { Home, Search, DollarSign, TrendingUp, MessageSquare, Bell, User, Menu, Newspaper, Settings } from 'lucide-react';
 import { Button } from './ui/button';
 import { ThemeToggle } from './ThemeToggle';
 
@@ -24,7 +24,8 @@ export function Layout({ children }: LayoutProps) {
   const utilityPages = [
     { id: 'messages', label: 'Messages', icon: MessageSquare, path: '/account/messages' },
     { id: 'notifications', label: 'Notifications', icon: Bell, path: '/account/notifications' },
-    { id: 'profile', label: 'Profile', icon: User, path: '/account/profile' }
+    { id: 'profile', label: 'Profile', icon: User, path: '/account/profile' },
+    { id: 'settings', label: 'Settings', icon: Settings, path: '/account/settings' }
   ];
 
   const handleNavigation = (path: string) => {
