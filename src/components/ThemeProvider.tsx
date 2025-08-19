@@ -56,6 +56,8 @@ export function ThemeProvider({
     setTheme: (theme: Theme) => {
       localStorage.setItem(storageKey, theme)
       setTheme(theme)
+      // Force a re-render to update the theme toggle icon
+      window.dispatchEvent(new Event('themechange'))
     },
   }
 
