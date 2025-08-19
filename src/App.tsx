@@ -13,30 +13,28 @@ import { ProfilePage } from './components/pages/ProfilePage';
 
 export default function App() {
   return (
-    <>
+    <ThemeProvider defaultTheme="system" storageKey="playright-ui-theme">
       <link
         href="https://fonts.googleapis.com/css2?family=Stalinist+One&display=swap"
         rel="stylesheet"
       />
-      <ThemeProvider defaultTheme="dark" storageKey="playright-ui-theme">
-        <div className="min-h-screen bg-background text-foreground">
-          <Router>
-            <Layout>
-              <Routes>
-                <Route path="/" element={<HomePage />} />
-                <Route path="/player-search" element={<PlayerSearchPage />} />
-                <Route path="/deals" element={<DealsPage />} />
-                <Route path="/market" element={<MarketPage />} />
-                <Route path="/news" element={<NewsPage />} />
-                <Route path="/account/messages" element={<MessagesPage />} />
-                <Route path="/account/notifications" element={<NotificationsPage />} />
-                <Route path="/account/profile" element={<ProfilePage />} />
-                <Route path="*" element={<Navigate to="/" replace />} />
-              </Routes>
-            </Layout>
-          </Router>
-        </div>
-      </ThemeProvider>
-    </>
+      <div className="min-h-screen bg-background text-foreground">
+        <Router>
+          <Layout>
+            <Routes>
+              <Route path="/" element={<HomePage />} />
+              <Route path="/player-search" element={<PlayerSearchPage />} />
+              <Route path="/deals" element={<DealsPage />} />
+              <Route path="/market" element={<MarketPage />} />
+              <Route path="/news" element={<NewsPage />} />
+              <Route path="/account/messages" element={<MessagesPage />} />
+              <Route path="/account/notifications" element={<NotificationsPage />} />
+              <Route path="/account/profile" element={<ProfilePage />} />
+              <Route path="*" element={<Navigate to="/" replace />} />
+            </Routes>
+          </Layout>
+        </Router>
+      </div>
+    </ThemeProvider>
   );
 }
