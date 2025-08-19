@@ -1,88 +1,40 @@
-import { useState } from "react";
-import { ThemeProvider } from "./components/ThemeProvider";
-import { Layout } from "./components/Layout";
-import { HomePage } from "./components/pages/HomePage";
-import { PlayerSearchPage } from "./components/pages/PlayerSearchPage";
-import { DealsPage } from "./components/pages/DealsPage";
-import { MarketPage } from "./components/pages/MarketPage";
-import { NewsPage } from "./components/pages/NewsPage";
+import React from 'react';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { ThemeProvider } from './components/ThemeProvider';
+import { Layout } from './components/Layout';
+import { HomePage } from './components/pages/HomePage';
+import { PlayerSearchPage } from './components/pages/PlayerSearchPage';
+import { DealsPage } from './components/pages/DealsPage';
+import { MarketPage } from './components/pages/MarketPage';
+import { NewsPage } from './components/pages/NewsPage';
+import { MessagesPage } from './components/pages/MessagesPage';
+import { NotificationsPage } from './components/pages/NotificationsPage';
+import { ProfilePage } from './components/pages/ProfilePage';
 
 export default function App() {
-  const [currentPage, setCurrentPage] = useState("home");
-
-  const renderPage = () => {
-    switch (currentPage) {
-      case "home":
-        return <HomePage />;
-      case "player-search":
-        return <PlayerSearchPage />;
-      case "deals":
-        return <DealsPage />;
-      case "market":
-        return <MarketPage />;
-      case "news":
-        return <NewsPage />;
-      case "messages":
-        return (
-          <div className="flex items-center justify-center h-96">
-            <div className="text-center">
-              <h2 className="text-2xl font-medium mb-2">
-                Messages
-              </h2>
-              <p className="text-muted-foreground">
-                Message center coming soon
-              </p>
-            </div>
-          </div>
-        );
-      case "notifications":
-        return (
-          <div className="flex items-center justify-center h-96">
-            <div className="text-center">
-              <h2 className="text-2xl font-medium mb-2">
-                Notifications
-              </h2>
-              <p className="text-muted-foreground">
-                Notification center coming soon
-              </p>
-            </div>
-          </div>
-        );
-      case "profile":
-        return (
-          <div className="flex items-center justify-center h-96">
-            <div className="text-center">
-              <h2 className="text-2xl font-medium mb-2">
-                Profile
-              </h2>
-              <p className="text-muted-foreground">
-                Profile management coming soon
-              </p>
-            </div>
-          </div>
-        );
-      default:
-        return <HomePage />;
-    }
-  };
-
   return (
     <>
       <link
         href="https://fonts.googleapis.com/css2?family=Stalinist+One&display=swap"
         rel="stylesheet"
       />
-      <ThemeProvider
-        defaultTheme="dark"
-        storageKey="playright-ui-theme"
-      >
+      <ThemeProvider defaultTheme="dark" storageKey="playright-ui-theme">
         <div className="min-h-screen bg-background text-foreground">
-          <Layout
-            currentPage={currentPage}
-            onPageChange={setCurrentPage}
-          >
-            {renderPage()}
-          </Layout>
+          <Router>
+            <Layout>
+              <Routes>
+                <Route path="/" element={<HomePage />} />
+                <Route path="/player-search" element={<PlayerSearchPage />} />
+                <Route path="/deals" element={<DealsPage />} />
+                <Route path="/market" element={<MarketPage />} />
+                <Route path="/news" element={<NewsPage />} />
+                <Route path="/account/messages" element={<MessagesPage />} />
+                <Route path="/account/notifications" element={<NotificationsPage />} />
+                <Route path="/account/profile" element={<ProfilePage />} />
+                <Route path="*" element={<Navigate to="/" replace />} />
+              </Routes>
+            </Layout>
+          </Router>
         </div>
       </ThemeProvider>
     </>

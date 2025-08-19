@@ -1,30 +1,39 @@
-import { useState } from 'react'
-import { Home, Search, DollarSign, TrendingUp, MessageSquare, Bell, User, Menu } from 'lucide-react'
-import { Button } from './ui/button'
-import { ThemeToggle } from './ThemeToggle'
+import React, { useState } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { Home, Search, DollarSign, TrendingUp, MessageSquare, Bell, User, Menu, Newspaper } from 'lucide-react';
+import { Button } from './ui/button';
+import { ThemeToggle } from './ThemeToggle';
 
 interface LayoutProps {
-  children: React.ReactNode
-  currentPage: string
-  onPageChange: (page: string) => void
+  children: React.ReactNode;
 }
 
-export function Layout({ children, currentPage, onPageChange }: LayoutProps) {
-  const [sidebarOpen, setSidebarOpen] = useState(true)
+export function Layout({ children }: LayoutProps) {
+  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const navigate = useNavigate();
+  const location = useLocation();
 
   const mainPages = [
-    { id: 'home', label: 'Home', icon: Home },
-    { id: 'player-search', label: 'Player Search', icon: Search },
-    { id: 'deals', label: 'Deals', icon: DollarSign },
-    { id: 'market', label: 'Market', icon: TrendingUp },
-    { id: 'news', label: 'News', icon: MessageSquare }
-  ]
+    { id: 'home', label: 'Home', icon: Home, path: '/' },
+    { id: 'player-search', label: 'Player Search', icon: Search, path: '/player-search' },
+    { id: 'deals', label: 'Deals', icon: DollarSign, path: '/deals' },
+    { id: 'market', label: 'Market', icon: TrendingUp, path: '/market' },
+    { id: 'news', label: 'News', icon: Newspaper, path: '/news' }
+  ];
 
   const utilityPages = [
-    { id: 'messages', label: 'Messages', icon: MessageSquare },
-    { id: 'notifications', label: 'Notifications', icon: Bell },
-    { id: 'profile', label: 'Profile', icon: User }
-  ]
+    { id: 'messages', label: 'Messages', icon: MessageSquare, path: '/account/messages' },
+    { id: 'notifications', label: 'Notifications', icon: Bell, path: '/account/notifications' },
+    { id: 'profile', label: 'Profile', icon: User, path: '/account/profile' }
+  ];
+
+  const handleNavigation = (path: string) => {
+    navigate(path);
+  };
+
+  const isCurrentPage = (path: string) => {
+    return location.pathname === path;
+  };
 
   return (
     <div className="flex min-h-screen w-full bg-background">
@@ -52,8 +61,8 @@ export function Layout({ children, currentPage, onPageChange }: LayoutProps) {
             {mainPages.map((page) => (
               <Button
                 key={page.id}
-                variant={currentPage === page.id ? "secondary" : "ghost"}
-                onClick={() => onPageChange(page.id)}
+                variant={isCurrentPage(page.path) ? "secondary" : "ghost"}
+                onClick={() => handleNavigation(page.path)}
                 className="w-full justify-start mb-1"
               >
                 <page.icon className="w-4 h-4" />
@@ -67,8 +76,8 @@ export function Layout({ children, currentPage, onPageChange }: LayoutProps) {
             {utilityPages.map((page) => (
               <Button
                 key={page.id}
-                variant={currentPage === page.id ? "secondary" : "ghost"}
-                onClick={() => onPageChange(page.id)}
+                variant={isCurrentPage(page.path) ? "secondary" : "ghost"}
+                onClick={() => handleNavigation(page.path)}
                 className="w-full justify-start mb-1"
               >
                 <page.icon className="w-4 h-4" />
@@ -93,10 +102,20 @@ export function Layout({ children, currentPage, onPageChange }: LayoutProps) {
             </Button>
             <div className="ml-auto flex items-center gap-4">
               <ThemeToggle />
-              <Button variant="ghost" size="sm" className="text-muted-foreground">
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                className="text-muted-foreground"
+                onClick={() => handleNavigation('/account/notifications')}
+              >
                 <Bell className="w-4 h-4" />
               </Button>
-              <Button variant="ghost" size="sm" className="text-muted-foreground">
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                className="text-muted-foreground"
+                onClick={() => handleNavigation('/account/profile')}
+              >
                 <User className="w-4 h-4" />
               </Button>
             </div>
@@ -108,5 +127,5 @@ export function Layout({ children, currentPage, onPageChange }: LayoutProps) {
         </div>
       </main>
     </div>
-  )
+  );
 }

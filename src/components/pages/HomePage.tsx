@@ -1,9 +1,12 @@
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card'
 import { Button } from '../ui/button'
 import { Badge } from '../ui/badge'
+import { useNavigate } from 'react-router-dom'
 import { TrendingUp, Users, DollarSign, Activity, ArrowRight } from 'lucide-react'
 
 export function HomePage() {
+  const navigate = useNavigate()
+
   const stats = [
     { label: 'Active Players', value: '1,247', icon: Users, change: '+12%' },
     { label: 'Total Deals', value: '$2.4M', icon: DollarSign, change: '+23%' },
@@ -16,6 +19,26 @@ export function HomePage() {
     { player: 'Sarah Williams', brand: 'Adidas Regional', value: '$12K', sport: 'Soccer' },
     { player: 'David Chen', brand: 'Local Fitness Co.', value: '$8K', sport: 'Tennis' }
   ]
+
+  const handleQuickAction = (action: string) => {
+    switch (action) {
+      case 'players':
+        navigate('/player-search')
+        break
+      case 'deals':
+        navigate('/deals')
+        break
+      case 'market':
+        navigate('/market')
+        break
+      case 'report':
+        // TODO: Implement report generation
+        console.log('Generate report functionality to be implemented')
+        break
+      default:
+        break
+    }
+  }
 
   return (
     <div className="space-y-8">
@@ -62,7 +85,11 @@ export function HomePage() {
                 </div>
               </div>
             ))}
-            <Button variant="ghost" className="w-full justify-between">
+            <Button 
+              variant="ghost" 
+              className="w-full justify-between"
+              onClick={() => navigate('/deals')}
+            >
               View All Deals
               <ArrowRight className="w-4 h-4" />
             </Button>
@@ -74,19 +101,35 @@ export function HomePage() {
             <CardTitle>Quick Actions</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
-            <Button className="w-full justify-start" variant="outline">
+            <Button 
+              className="w-full justify-start" 
+              variant="outline"
+              onClick={() => handleQuickAction('players')}
+            >
               <Users className="w-4 h-4 mr-2" />
               Find New Players
             </Button>
-            <Button className="w-full justify-start" variant="outline">
+            <Button 
+              className="w-full justify-start" 
+              variant="outline"
+              onClick={() => handleQuickAction('deals')}
+            >
               <DollarSign className="w-4 h-4 mr-2" />
               Create Deal Proposal
             </Button>
-            <Button className="w-full justify-start" variant="outline">
+            <Button 
+              className="w-full justify-start" 
+              variant="outline"
+              onClick={() => handleQuickAction('market')}
+            >
               <TrendingUp className="w-4 h-4 mr-2" />
               Market Analysis
             </Button>
-            <Button className="w-full justify-start" variant="outline">
+            <Button 
+              className="w-full justify-start" 
+              variant="outline"
+              onClick={() => handleQuickAction('report')}
+            >
               <Activity className="w-4 h-4 mr-2" />
               Generate Report
             </Button>
