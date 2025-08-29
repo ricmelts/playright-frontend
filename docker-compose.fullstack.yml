@@ -1,0 +1,141 @@
+version: '3.8'
+
+services:
+  # PocketBase Database
+  pocketbase:
+    build:
+      context: ./BACKEND/pocketbase
+      dockerfile: ../Dockerfile.pocketbase
+    ports:
+      - "8090:8090"
+    volumes:
+      - ./BACKEND/pocketbase/pb_data:/pb/pb_data
+      - ./BACKEND/pocketbase/pb_hooks:/pb/pb_hooks
+      - ./BACKEND/pocketbase/pb_migrations:/pb/pb_migrations
+    environment:
+      - PB_ENCRYPTION_KEY=${PB_ENCRYPTION_KEY:-your-encryption-key-here}
+    networks:
+      - playright-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8090/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Redis Cache
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    networks:
+      - playright-network
+
+  # API Server
+  api-server:
+    build:
+      context: ./BACKEND/api-server
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      - ENVIRONMENT=development
+      - POCKETBASE_URL=http://pocketbase:8090
+      - REDIS_URL=redis://redis:6379
+      - FRONTEND_URL=http://localhost:3000
+      - SMTP_HOST=${SMTP_HOST}
+      - SMTP_PORT=${SMTP_PORT}
+      - SMTP_USERNAME=${SMTP_USERNAME}
+      - SMTP_PASSWORD=${SMTP_PASSWORD}
+      - SMTP_FROM_EMAIL=${SMTP_FROM_EMAIL}
+      - FCM_SERVER_KEY=${FCM_SERVER_KEY}
+      - TWILIO_ACCOUNT_SID=${TWILIO_ACCOUNT_SID}
+      - TWILIO_AUTH_TOKEN=${TWILIO_AUTH_TOKEN}
+      - TWILIO_PHONE_NUMBER=${TWILIO_PHONE_NUMBER}
+    depends_on:
+      - pocketbase
+      - redis
+    networks:
+      - playright-network
+    volumes:
+      - ./BACKEND/api-server:/app
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Celery Worker
+  celery-worker:
+    build:
+      context: ./BACKEND/api-server
+      dockerfile: Dockerfile.worker
+    environment:
+      - ENVIRONMENT=development
+      - POCKETBASE_URL=http://pocketbase:8090
+      - REDIS_URL=redis://redis:6379
+      - SMTP_HOST=${SMTP_HOST}
+      - SMTP_PORT=${SMTP_PORT}
+      - SMTP_USERNAME=${SMTP_USERNAME}
+      - SMTP_PASSWORD=${SMTP_PASSWORD}
+      - SMTP_FROM_EMAIL=${SMTP_FROM_EMAIL}
+      - FCM_SERVER_KEY=${FCM_SERVER_KEY}
+      - TWILIO_ACCOUNT_SID=${TWILIO_ACCOUNT_SID}
+      - TWILIO_AUTH_TOKEN=${TWILIO_AUTH_TOKEN}
+      - TWILIO_PHONE_NUMBER=${TWILIO_PHONE_NUMBER}
+    depends_on:
+      - pocketbase
+      - redis
+    networks:
+      - playright-network
+    volumes:
+      - ./BACKEND/api-server:/app
+
+  # AI Engine
+  ai-engine:
+    build:
+      context: ./BACKEND/ai-engine
+      dockerfile: Dockerfile
+    ports:
+      - "8001:8000"
+    environment:
+      - ENVIRONMENT=development
+      - POCKETBASE_URL=http://pocketbase:8090
+      - REDIS_URL=redis://redis:6379
+    depends_on:
+      - pocketbase
+      - redis
+    networks:
+      - playright-network
+    volumes:
+      - ./BACKEND/ai-engine:/app
+
+  # Frontend (React)
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=development
+      - REACT_APP_API_URL=http://localhost:8000
+      - REACT_APP_AI_API_URL=http://localhost:8001
+      - REACT_APP_POCKETBASE_URL=http://localhost:8090
+    depends_on:
+      - api-server
+    networks:
+      - playright-network
+    volumes:
+      - ./src:/app/src
+      - ./public:/app/public
+      - ./package.json:/app/package.json
+      - ./package-lock.json:/app/package-lock.json
+
+volumes:
+  redis-data:
+
+networks:
+  playright-network:
+    driver: bridge

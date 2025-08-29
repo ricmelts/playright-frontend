@@ -1,18 +1,45 @@
 
+# PlayRight - AI-Powered Sports Agency Platform
 
-# PlayRight.ai - Sports Agency Platform
+PlayRight is a comprehensive full-stack platform that connects athletes with local endorsement opportunities using advanced AI matching algorithms.
 
-A modern, responsive web application for sports agency management, built with React, TypeScript, and Tailwind CSS.
+## 🏗️ Architecture
 
-## 🚀 Features
+```
+PlayRight/
+├── 🎨 Frontend (React + TypeScript)
+├── 🔧 API Server (FastAPI + Python)
+├── 🤖 AI Engine (Machine Learning + NLP)
+├── 📊 Database (PocketBase)
+├── 🔄 Background Workers (Celery)
+└── ⚡ Cache (Redis)
+```
 
-- **Modern UI/UX**: Clean, professional interface with dark/light theme support
-- **Responsive Design**: Works seamlessly on desktop, tablet, and mobile devices
-- **TypeScript**: Full type safety and better development experience
-- **Tailwind CSS**: Utility-first CSS framework for rapid styling
-- **Component Library**: Comprehensive UI components built with Radix UI
-- **Theme System**: Dynamic dark/light mode switching
-- **Collapsible Sidebar**: Space-efficient navigation with smooth animations
+## ✨ Features
+
+### 🤖 AI-Powered Matching
+- **Smart Compatibility Scoring**: Multi-factor analysis including sport alignment, audience demographics, brand safety
+- **Semantic Analysis**: NLP-powered profile matching using sentence transformers
+- **Real-time Recommendations**: Dynamic matching based on user behavior and preferences
+- **Market Insights**: Trending analysis and market saturation reports
+
+### 👥 User Management
+- **Role-based Authentication**: Athletes, Brands, and Agents with specific permissions
+- **Profile Completion Tracking**: Guided onboarding with verification steps
+- **Social Media Integration**: Automatic metrics syncing from major platforms
+- **Real-time Notifications**: Email, push, and SMS notifications
+
+### 💼 Deal Management
+- **Campaign Creation**: Comprehensive campaign builder with targeting options
+- **Deal Lifecycle**: From matching to completion with status tracking
+- **Document Management**: Secure file uploads and contract storage
+- **Analytics Dashboard**: Performance tracking and ROI analysis
+
+### 📊 Advanced Analytics
+- **User Analytics**: Individual performance metrics and insights
+- **Market Analysis**: Sport-specific trends and opportunities
+- **Platform Metrics**: Overall system health and usage statistics
+- **Predictive Analytics**: Success rate predictions and recommendations
 
 ## 📋 Pages & Features
 

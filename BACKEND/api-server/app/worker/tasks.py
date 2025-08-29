@@ -6,6 +6,11 @@ import structlog
 from typing import Dict, List
 from datetime import datetime, timedelta
 import asyncio
+import smtplib
+import requests
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
+from app.core.config import settings
 
 logger = structlog.get_logger()
 
@@ -98,12 +103,73 @@ def calculate_ai_matches(campaign_id: str):
         # This would store results in a matches table or cache
         logger.info("AI matches calculation started", campaign_id=campaign_id)
         
-        # Placeholder for actual matching logic
-        # In production, this would:
-        # 1. Get all eligible athletes
-        # 2. Run AI matching algorithm
-        # 3. Store results in database or cache
-        # 4. Send notifications to brand
+        # Get all eligible athletes based on campaign criteria
+        athletes = pb_client.client.collection("athletes").get_list(
+            per_page=500,
+            expand="user"
+        )
+        
+        # Get brand data for the campaign
+        brand = campaign.expand.get('brand')
+        if not brand:
+            raise Exception("Campaign brand data not found")
+        
+        # Run AI matching using the AIMatchingService
+        matches = loop.run_until_complete(
+            ai_service.find_athlete_matches(
+                brand_data=brand.__dict__,
+                athletes_data=[athlete.__dict__ for athlete in athletes.items]
+            )
+        )
+        
+        # Store top matches in database
+        top_matches = matches[:20]  # Store top 20 matches
+        
+        for match in top_matches:
+            try:
+                # Create or update match record
+                match_data = {
+                    "campaign": campaign_id,
+                    "athlete": match["athlete_id"],
+                    "brand": brand.id,
+                    "overall_score": match["overall_score"],
+                    "factors": match["factors"],
+                    "estimated_rate": match["estimated_rate"],
+                    "status": "pending",
+                    "ai_recommendation": match.get("recommendation", "")
+                }
+                
+                # Check if match already exists
+                existing_matches = pb_client.client.collection("matches").get_list(
+                    filter=f"campaign = '{campaign_id}' && athlete = '{match['athlete_id']}'"
+                )
+                
+                if existing_matches.total_items > 0:
+                    # Update existing match
+                    pb_client.client.collection("matches").update(
+                        existing_matches.items[0].id, match_data
+                    )
+                else:
+                    # Create new match
+                    pb_client.client.collection("matches").create(match_data)
+                    
+            except Exception as e:
+                logger.error("Failed to store match", 
+                           campaign_id=campaign_id, 
+                           athlete_id=match["athlete_id"], 
+                           error=str(e))
+        
+        # Send notification to brand about new matches
+        if brand.user and top_matches:
+            send_notification.delay(
+                brand.user,
+                "new_matches_available",
+                {
+                    "campaign_id": campaign_id,
+                    "matches_count": len(top_matches),
+                    "top_score": top_matches[0]["overall_score"]
+                }
+            )
         
         return {"status": "completed", "campaign_id": campaign_id}
         
@@ -121,11 +187,33 @@ def send_notification(user_id: str, notification_type: str, data: Dict):
                    type=notification_type,
                    data_keys=list(data.keys()))
         
-        # Placeholder for actual notification logic:
-        # - Email notifications
-        # - Push notifications
-        # - In-app notifications
-        # - SMS for urgent updates
+        # Get user details for notification
+        user = pb_client.client.collection("users").get_one(user_id)
+        
+        # Create in-app notification record
+        notification_record = {
+            "user": user_id,
+            "type": notification_type,
+            "title": _get_notification_title(notification_type, data),
+            "message": _get_notification_message(notification_type, data),
+            "data": data,
+            "read": False,
+            "created": datetime.now().isoformat()
+        }
+        
+        pb_client.client.collection("notifications").create(notification_record)
+        
+        # Send email notification based on user preferences
+        if _should_send_email(notification_type, user):
+            _send_email_notification(user.email, notification_type, data)
+        
+        # Send push notification if user has push tokens
+        if hasattr(user, 'push_token') and user.push_token:
+            _send_push_notification(user.push_token, notification_type, data)
+        
+        # Send SMS for urgent notifications
+        if notification_type in ['deal_expired', 'payment_failed', 'urgent_update'] and hasattr(user, 'phone') and user.phone:
+            _send_sms_notification(user.phone, notification_type, data)
         
         return {"status": "sent", "user_id": user_id, "type": notification_type}
         
@@ -315,3 +403,176 @@ def generate_daily_analytics():
     except Exception as e:
         logger.error("Daily analytics generation failed", error=str(e))
         return {"status": "failed", "error": str(e)}
+
+
+# Notification helper functions
+def _get_notification_title(notification_type: str, data: Dict) -> str:
+    """Generate notification title based on type and data"""
+    titles = {
+        "deal_status_update": "Deal Status Updated",
+        "new_matches_available": "New Matches Available",
+        "payment_received": "Payment Received",
+        "campaign_approved": "Campaign Approved",
+        "deal_expired": "Deal Expired",
+        "message_received": "New Message",
+        "profile_viewed": "Profile Viewed",
+        "payment_failed": "Payment Failed",
+        "urgent_update": "Urgent Update"
+    }
+    return titles.get(notification_type, "Notification")
+
+def _get_notification_message(notification_type: str, data: Dict) -> str:
+    """Generate notification message based on type and data"""
+    if notification_type == "deal_status_update":
+        return f"Your deal status has been updated to {data.get('new_status', 'unknown')}"
+    elif notification_type == "new_matches_available":
+        count = data.get('matches_count', 0)
+        return f"{count} new athlete matches available for your campaign"
+    elif notification_type == "payment_received":
+        amount = data.get('amount', 0)
+        return f"Payment of ${amount:,.2f} has been processed"
+    elif notification_type == "campaign_approved":
+        return "Your campaign has been approved and is now active"
+    elif notification_type == "deal_expired":
+        return "Your deal has expired. Please renew or create a new one"
+    elif notification_type == "message_received":
+        sender = data.get('sender_name', 'Someone')
+        return f"You have a new message from {sender}"
+    elif notification_type == "profile_viewed":
+        viewer = data.get('viewer_name', 'Someone')
+        return f"{viewer} viewed your profile"
+    elif notification_type == "payment_failed":
+        return "Payment failed. Please update your payment method"
+    elif notification_type == "urgent_update":
+        return data.get('message', 'Important update requiring your attention')
+    else:
+        return "You have a new notification"
+
+def _should_send_email(notification_type: str, user) -> bool:
+    """Determine if email notification should be sent based on user preferences"""
+    # Check user email preferences if they exist
+    if hasattr(user, 'email_preferences'):
+        email_prefs = user.email_preferences or {}
+        return email_prefs.get(notification_type, True)
+    
+    # Default email notifications for important events
+    important_notifications = [
+        "deal_status_update", "payment_received", "payment_failed", 
+        "deal_expired", "urgent_update"
+    ]
+    return notification_type in important_notifications
+
+def _send_email_notification(email: str, notification_type: str, data: Dict):
+    """Send email notification using SMTP"""
+    try:
+        subject = _get_notification_title(notification_type, data)
+        body = _get_notification_message(notification_type, data)
+        
+        # Create email message
+        msg = MIMEMultipart()
+        msg['From'] = settings.SMTP_FROM_EMAIL
+        msg['To'] = email
+        msg['Subject'] = f"PlayRight - {subject}"
+        
+        # Create HTML body
+        html_body = f"""
+        <html>
+            <body>
+                <h2>PlayRight Notification</h2>
+                <h3>{subject}</h3>
+                <p>{body}</p>
+                <hr>
+                <p>This email was sent from PlayRight. To manage your notification preferences, 
+                   log in to your account.</p>
+            </body>
+        </html>
+        """
+        
+        msg.attach(MIMEText(html_body, 'html'))
+        
+        # Send email
+        server = smtplib.SMTP(settings.SMTP_HOST, settings.SMTP_PORT)
+        if settings.SMTP_USE_TLS:
+            server.starttls()
+        if settings.SMTP_USERNAME and settings.SMTP_PASSWORD:
+            server.login(settings.SMTP_USERNAME, settings.SMTP_PASSWORD)
+        
+        server.send_message(msg)
+        server.quit()
+        
+        logger.info("Email notification sent", email=email, type=notification_type)
+        
+    except Exception as e:
+        logger.error("Failed to send email notification", email=email, error=str(e))
+
+def _send_push_notification(push_token: str, notification_type: str, data: Dict):
+    """Send push notification using FCM or similar service"""
+    try:
+        title = _get_notification_title(notification_type, data)
+        body = _get_notification_message(notification_type, data)
+        
+        # Example using FCM (Firebase Cloud Messaging)
+        fcm_payload = {
+            "to": push_token,
+            "notification": {
+                "title": title,
+                "body": body,
+                "icon": "ic_notification",
+                "click_action": "FLUTTER_NOTIFICATION_CLICK"
+            },
+            "data": {
+                "type": notification_type,
+                **data
+            }
+        }
+        
+        headers = {
+            "Authorization": f"key={settings.FCM_SERVER_KEY}",
+            "Content-Type": "application/json"
+        }
+        
+        response = requests.post(
+            "https://fcm.googleapis.com/fcm/send",
+            json=fcm_payload,
+            headers=headers,
+            timeout=10
+        )
+        
+        if response.status_code == 200:
+            logger.info("Push notification sent", token=push_token[:10] + "...", type=notification_type)
+        else:
+            logger.error("Push notification failed", status=response.status_code, response=response.text)
+            
+    except Exception as e:
+        logger.error("Failed to send push notification", token=push_token[:10] + "...", error=str(e))
+
+def _send_sms_notification(phone: str, notification_type: str, data: Dict):
+    """Send SMS notification using Twilio or similar service"""
+    try:
+        title = _get_notification_title(notification_type, data)
+        body = _get_notification_message(notification_type, data)
+        message = f"PlayRight: {title}\n{body}"
+        
+        # Example using Twilio
+        twilio_payload = {
+            "From": settings.TWILIO_PHONE_NUMBER,
+            "To": phone,
+            "Body": message[:160]  # SMS character limit
+        }
+        
+        auth = (settings.TWILIO_ACCOUNT_SID, settings.TWILIO_AUTH_TOKEN)
+        
+        response = requests.post(
+            f"https://api.twilio.com/2010-04-01/Accounts/{settings.TWILIO_ACCOUNT_SID}/Messages.json",
+            data=twilio_payload,
+            auth=auth,
+            timeout=10
+        )
+        
+        if response.status_code == 201:
+            logger.info("SMS notification sent", phone=phone[-4:], type=notification_type)
+        else:
+            logger.error("SMS notification failed", status=response.status_code, response=response.text)
+            
+    except Exception as e:
+        logger.error("Failed to send SMS notification", phone=phone[-4:], error=str(e))

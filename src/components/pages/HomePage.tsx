@@ -3,21 +3,86 @@ import { Button } from '../ui/button'
 import { Badge } from '../ui/badge'
 import { useNavigate } from 'react-router-dom'
 import { TrendingUp, Users, DollarSign, Activity, ArrowRight } from 'lucide-react'
+import { useQuery } from 'react-query'
+import { apiClient } from '../../services/api'
+import { useAuth } from '../../hooks/useAuth'
 
 export function HomePage() {
   const navigate = useNavigate()
+  const { user } = useAuth()
 
-  const stats = [
-    { label: 'Active Players', value: '1,247', icon: Users, change: '+12%' },
+  // Fetch platform analytics
+  const { data: analyticsData, isLoading: analyticsLoading } = useQuery(
+    'platformAnalytics',
+    () => apiClient.getPlatformAnalytics(),
+    {
+      onError: (error) => {
+        console.error('Error fetching analytics:', error);
+      }
+    }
+  )
+
+  // Fetch trending athletes
+  const { data: trendingAthletes, isLoading: trendingLoading } = useQuery(
+    'trendingAthletes',
+    () => apiClient.getTrendingAthletes(undefined, 5),
+    {
+      onError: (error) => {
+        console.error('Error fetching trending athletes:', error);
+      }
+    }
+  )
+
+  // Fetch recent deals
+  const { data: recentDealsData, isLoading: dealsLoading } = useQuery(
+    'recentDeals',
+    () => apiClient.getDeals(1, 5, { status: 'active' }),
+    {
+      onError: (error) => {
+        console.error('Error fetching deals:', error);
+      }
+    }
+  )
+
+  // Fallback stats if API is not available
+  const defaultStats = [
+    { label: 'Active Athletes', value: '1,247', icon: Users, change: '+12%' },
     { label: 'Total Deals', value: '$2.4M', icon: DollarSign, change: '+23%' },
     { label: 'Market Activity', value: '94%', icon: Activity, change: '+5%' },
     { label: 'Growth Rate', value: '18.2%', icon: TrendingUp, change: '+8%' }
   ]
 
-  const recentDeals = [
-    { player: 'Marcus Johnson', brand: 'Nike Local', value: '$15K', sport: 'Basketball' },
-    { player: 'Sarah Williams', brand: 'Adidas Regional', value: '$12K', sport: 'Soccer' },
-    { player: 'David Chen', brand: 'Local Fitness Co.', value: '$8K', sport: 'Tennis' }
+  const stats = analyticsData ? [
+    { 
+      label: 'Active Athletes', 
+      value: analyticsData.active_athletes?.toString() || '0', 
+      icon: Users, 
+      change: analyticsData.athlete_growth || '0%' 
+    },
+    { 
+      label: 'Total Deal Value', 
+      value: analyticsData.total_deal_value ? `$${(analyticsData.total_deal_value / 1000000).toFixed(1)}M` : '$0', 
+      icon: DollarSign, 
+      change: analyticsData.deal_value_growth || '0%' 
+    },
+    { 
+      label: 'Active Campaigns', 
+      value: analyticsData.active_campaigns?.toString() || '0', 
+      icon: Activity, 
+      change: analyticsData.campaign_growth || '0%' 
+    },
+    { 
+      label: 'Success Rate', 
+      value: analyticsData.success_rate ? `${analyticsData.success_rate.toFixed(1)}%` : '0%', 
+      icon: TrendingUp, 
+      change: analyticsData.success_rate_change || '0%' 
+    }
+  ] : defaultStats
+
+  const recentDeals = recentDealsData?.items?.slice(0, 3) || [
+    { athlete_name: 'Marcus Johnson', brand_name: 'Nike Local', value: 15000, sport: 'Basketball' },
+    { athlete_name: 'Sarah Williams', brand_name: 'Adidas Regional', value: 12000, sport: 'Soccer' },
+    { athlete_name: 'David Chen', brand_name: 'Local Fitness Co.', value: 8000, sport: 'Tennis' }
   ]
 
   const handleQuickAction = (action: string) => {
@@ -40,10 +105,20 @@ export function HomePage() {
     }
   }
 
+  if (analyticsLoading || trendingLoading || dealsLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[50vh]">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      </div>
+    )
+  }
+
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-3xl tracking-tight mb-2">Dashboard</h1>
+        <h1 className="text-3xl tracking-tight mb-2">
+          Welcome back, {user?.name || 'User'}!
+        </h1>
         <p className="text-muted-foreground">
           AI-powered sports agency connecting athletes with local endorsement opportunities.
         </p>
@@ -76,11 +151,15 @@ export function HomePage() {
             {recentDeals.map((deal, index) => (
               <div key={index} className="flex items-center justify-between p-3 rounded-lg border border-border/50 bg-muted/20">
                 <div>
-                  <p className="font-medium">{deal.player}</p>
-                  <p className="text-sm text-muted-foreground">{deal.brand}</p>
+                  <p className="font-medium">{deal.athlete_name || deal.player}</p>
+                  <p className="text-sm text-muted-foreground">{deal.brand_name || deal.brand}</p>
                 </div>
                 <div className="text-right">
-                  <p className="font-medium">{deal.value}</p>
+                  <p className="font-medium">
+                    {typeof deal.value === 'number' 
+                      ? `$${deal.value.toLocaleString()}` 
+                      : deal.value}
+                  </p>
                   <Badge variant="secondary" className="text-xs">{deal.sport}</Badge>
                 </div>
               </div>

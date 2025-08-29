@@ -1,0 +1,29 @@
+# PocketBase Dockerfile
+FROM alpine:latest
+
+WORKDIR /pb
+
+# Install curl for health checks
+RUN apk add --no-cache curl
+
+# Copy PocketBase executable and configuration
+COPY pocketbase.exe ./pocketbase
+COPY pb_hooks/ ./pb_hooks/
+COPY pb_migrations/ ./pb_migrations/
+COPY start.bat ./
+
+# Make executable
+RUN chmod +x ./pocketbase
+
+# Create data directory
+RUN mkdir -p /pb/pb_data
+
+# Expose port
+EXPOSE 8090
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+  CMD curl -f http://localhost:8090/api/health || exit 1
+
+# Start PocketBase
+CMD ["./pocketbase", "serve", "--http=0.0.0.0:8090"]
