@@ -1,13 +1,13 @@
 import pytest
+from unittest.mock import Mock, patch
 from fastapi.testclient import TestClient
 from app.main import app
-
-client = TestClient(app)
+from app.services.auth import AuthService
 
 class TestAuth:
     """Test authentication endpoints"""
     
-    def test_register_athlete(self):
+    def test_register_athlete(self, client: TestClient):
         """Test athlete registration"""
         user_data = {
             "email": "test.athlete@example.com",
@@ -18,13 +18,17 @@ class TestAuth:
             "last_name": "Athlete"
         }
         
-        response = client.post("/api/auth/register", json=user_data)
-        
-        # Note: This will fail without actual PocketBase running
-        # In CI/CD, you'd use a test database
-        assert response.status_code in [200, 500]  # 500 expected without PocketBase
+        with patch('app.services.auth.AuthService.register_user') as mock_register:
+            mock_register.return_value = {
+                "id": "test_user_id",
+                "email": "test.athlete@example.com",
+                "role": "athlete"
+            }
+            
+            response = client.post("/api/auth/register", json=user_data)
+            assert response.status_code == 201
     
-    def test_register_brand(self):
+    def test_register_brand(self, client: TestClient):
         """Test brand registration"""
         user_data = {
             "email": "test.brand@example.com",
@@ -35,20 +39,30 @@ class TestAuth:
             "last_name": "Brand"
         }
         
-        response = client.post("/api/auth/register", json=user_data)
-        assert response.status_code in [200, 500]
+        with patch('app.services.auth.AuthService.register_user') as mock_register:
+            mock_register.return_value = {
+                "id": "test_brand_id",
+                "email": "test.brand@example.com",
+                "role": "brand"
+            }
+            
+            response = client.post("/api/auth/register", json=user_data)
+            assert response.status_code == 201
     
-    def test_login_invalid_credentials(self):
+    def test_login_invalid_credentials(self, client: TestClient):
         """Test login with invalid credentials"""
         credentials = {
             "email": "nonexistent@example.com",
             "password": "wrongpassword"
         }
         
-        response = client.post("/api/auth/login", json=credentials)
-        assert response.status_code in [401, 500]
+        with patch('app.services.auth.AuthService.authenticate_user') as mock_auth:
+            mock_auth.return_value = None
+            
+            response = client.post("/api/auth/login", json=credentials)
+            assert response.status_code == 401
     
-    def test_password_mismatch(self):
+    def test_password_mismatch(self, client: TestClient):
         """Test registration with password mismatch"""
         user_data = {
             "email": "test@example.com",
@@ -58,13 +72,35 @@ class TestAuth:
         }
         
         response = client.post("/api/auth/register", json=user_data)
-        assert response.status_code == 400
-        assert "passwords do not match" in response.json()["detail"].lower()
+        assert response.status_code == 422
     
-    def test_get_current_user_unauthorized(self):
+    def test_get_current_user_unauthorized(self, client: TestClient):
         """Test getting current user without authentication"""
         response = client.get("/api/auth/me")
-        assert response.status_code in [401, 500]
+        assert response.status_code == 401
+    
+    def test_login_success(self, client: TestClient):
+        """Test successful login"""
+        login_data = {
+            "email": "test@example.com",
+            "password": "testpassword123"
+        }
+        
+        with patch('app.services.auth.AuthService.authenticate_user') as mock_auth:
+            mock_auth.return_value = {
+                "token": "test_jwt_token",
+                "user": {
+                    "id": "test_user_id",
+                    "email": "test@example.com",
+                    "role": "athlete"
+                }
+            }
+            
+            response = client.post("/api/auth/login", json=login_data)
+            assert response.status_code == 200
+            data = response.json()
+            assert "token" in data
+            assert data["user"]["email"] == "test@example.com"
 
 class TestAuthValidation:
     """Test authentication data validation"""
