@@ -1,3 +1,5 @@
+
+
 # PlayRight.ai - Sports Agency Platform
 
 A modern, responsive web application for sports agency management, built with React, TypeScript, and Tailwind CSS.
